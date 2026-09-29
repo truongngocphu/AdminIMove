@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {REQUIRED_SERVICE_CODES,formatVnd,currentFareFor} from '../src/servicePricingModel.js';
-test('pricing model exposes six service codes',()=>assert.deepEqual(REQUIRED_SERVICE_CODES,['BIKE','CAR_4','CAR_7','MPV_7','LUXURY_4','LUXURY_7']));
+test('pricing model exposes nine service codes',()=>assert.deepEqual(REQUIRED_SERVICE_CODES,['BIKE','DELIVERY','ERRAND','FOOD','CAR_4','CAR_7','MPV_7','LUXURY_4','LUXURY_7']));
 test('formatVnd handles numeric strings',()=>assert.equal(formatVnd('12000'),'12.000 ₫'));
 
 test('currentFareFor ignores ACTIVE versions that are not effective yet',()=>{

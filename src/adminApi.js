@@ -1,3 +1,5 @@
+import { gatewayUrl } from './apiRuntime.js';
+
 const ACCESS_KEY = 'imove_core_admin_access_token';
 
 export function adminAccessToken(){
@@ -17,7 +19,7 @@ export async function adminApiRequest(path, options = {}){
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(gatewayUrl(`/api${path}`), {
     ...options,
     headers,
     cache: 'no-store',

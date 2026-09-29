@@ -36,7 +36,7 @@ test('1.4.1 loads TrackAsia GL and environment-based map config', () => {
   assert.ok(fs.existsSync(path.join(root, 'src/trackAsiaConfig.js')));
 });
 
-test('TrackAsia shell is carried forward into package 1.5.1', () => {
+test('TrackAsia shell is carried forward into package 1.6.3', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.equal(pkg.version, '1.5.1');
+  assert.equal(pkg.version, '1.6.3');
 });

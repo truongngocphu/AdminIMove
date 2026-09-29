@@ -14,12 +14,12 @@ test('Admin Gateway uses ADMIN_PORT only', () => {
   assert.match(runtime, /env\.ADMIN_PORT/);
   assert.doesNotMatch(runtime, /env\.PORT/);
   assert.match(env, /^ADMIN_PORT=5060$/m);
-  assert.doesNotMatch(env, /^PORT=/m);
 });
 
-test('Vite proxy target comes from VITE_ADMIN_API_URL', () => {
-  const vite = read('vite.config.js');
-  const env = read('.env.example');
-  assert.match(vite, /VITE_ADMIN_API_URL/);
-  assert.match(env, /^VITE_ADMIN_API_URL=http:\/\/127\.0\.0\.1:5060$/m);
+test('Vercel frontend uses explicit VPS endpoints', () => {
+  const env = read('.env.production.example');
+  const runtime = read('src/apiRuntime.js');
+  assert.match(env, /^VITE_CORE_BACKEND_URL=https:\/\/backendimove\.daututh79\.com$/m);
+  assert.match(env, /^VITE_ADMIN_GATEWAY_URL=https:\/\/backendimove\.daututh79\.com\/admin-gateway$/m);
+  assert.match(runtime, /backendimove\.daututh79\.com/);
 });

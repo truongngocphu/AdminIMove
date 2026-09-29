@@ -26,6 +26,7 @@ import CommerceOrdersPage from './CommerceOrdersPage.jsx';
 import EnterpriseSettingsPage from './SettingsPage.jsx';
 import { PermissionDenied } from './AdminPageState.jsx';
 import { adminApiRequest, adminAccessToken, hasPermission } from './adminApi.js';
+import { gatewayUrl } from './apiRuntime.js';
 import { coreAdminLogin, coreAdminLogout, hasCoreAdminSession, currentCoreAdmin } from './coreApi.js';
 import {
   Bell, Search, Menu, X, LayoutDashboard, Users, Car, Route,
@@ -42,7 +43,7 @@ const dbCache={customers:[],drivers:[],trips:[],payments:[],revenue:[],settings:
 
 async function apiRequest(path,options={}){
   const token=adminAccessToken();
-  const response=await fetch(`/api${path}`,{
+  const response=await fetch(gatewayUrl(`/api${path}`),{
     headers:{
       'Content-Type':'application/json',
       ...(token?{Authorization:`Bearer ${token}`}:{ }),
