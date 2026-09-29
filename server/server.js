@@ -30,7 +30,7 @@ const PORT = runtime.adminPort;
 const CORE_HTTP_PORT = runtime.corePort;
 const CORE_BACKEND_URL = runtime.coreBackendUrl;
 const CORE_DISCOVERY_PORT = Number(process.env.CORE_DISCOVERY_PORT || 5051);
-
+const ADMIN_HOST = runtime.adminHost;
 const DB_NAME = process.env.MONGODB_DB || 'th79_imove';
 const MONGODB_URI = String(process.env.MONGODB_URI_OVERRIDE || process.env.MONGODB_URI || '').trim();
 const CORE_DISCOVERY_TIMEOUT_MS = Math.max(300, Number(process.env.CORE_DISCOVERY_TIMEOUT_MS || 1300));
@@ -1265,7 +1265,7 @@ async function start() {
     console.log(`✅ MongoDB connected: ${DB_NAME}`);
     await ensureAdminRbacSeed();
     console.log('✅ Admin RBAC ready: users + admin_roles');
-    app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, ADMIN_HOST, () => {
       console.log(`✅ TH79 iMove Admin Gateway 1.5.1: http://localhost:${PORT}`);
       console.log(`🔎 Kiểm tra: http://localhost:${PORT}/api/health`);
       console.log(`🔗 Core Backend: ${CORE_BACKEND_URL} (HTTP ${CORE_HTTP_PORT})`);
