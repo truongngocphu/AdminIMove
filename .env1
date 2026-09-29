@@ -1,0 +1,9 @@
+# TH79 iMove Admin Web - Development
+# Vite 5173 -> Admin Gateway 5060 -> Core Backend 5050
+VITE_DEV_PORT=5173
+VITE_ADMIN_API_URL=http://127.0.0.1:5060
+# TrackAsia Maps (Admin 1.5.1)
+VITE_TRACKASIA_API_KEY=public_key
+VITE_TRACKASIA_API_BASE_URL=https://maps.track-asia.com
+VITE_TRACKASIA_DETAIL_LEVEL=enhanced
+VITE_TRACKASIA_STYLE_URL=

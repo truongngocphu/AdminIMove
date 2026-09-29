@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {validLivePoint} from '../src/operationsMapModel.js';
+const now=Date.parse('2026-09-19T03:00:00Z');
+test('map rejects Null Island and out-of-range coordinates',()=>{assert.equal(validLivePoint({lat:0,lng:0,updatedAt:'2026-09-19T02:59:30Z'},now),false);assert.equal(validLivePoint({lat:95,lng:106,updatedAt:'2026-09-19T02:59:30Z'},now),false);assert.equal(validLivePoint({lat:10.77,lng:106.7,updatedAt:'2026-09-19T02:59:30Z'},now),true)});
+test('Trips page exposes normalized detail and no backward completed mutation',()=>{const s=fs.readFileSync(new URL('../src/TripsPage.jsx',import.meta.url),'utf8');for(const m of ['Mã chuyến','Dịch vụ','Thanh toán','Settlement','Timeline','TripOperationsMap'])assert.match(s,new RegExp(m));assert.doesNotMatch(s,/COMPLETED[^\n]{0,120}(SEARCHING|IN_PROGRESS)/)});
