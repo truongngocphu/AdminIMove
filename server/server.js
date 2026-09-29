@@ -126,12 +126,34 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 900) {
   }
 }
 
-async function checkCore(baseUrl, timeoutMs = 900) {
+async function checkCore(baseUrl, timeoutMs = 3000) {
   try {
-    const response = await fetchWithTimeout(`${baseUrl}/health`, {}, timeoutMs);
+    const response = await fetchWithTimeout(
+      `${baseUrl}/health`,
+      {},
+      timeoutMs
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
     const payload = await response.json().catch(() => null);
-    return Boolean(payload?.backend === true || payload?.service === 'TH79_IMOVE_CORE');
-  } catch (_) {
+
+    if (!payload) {
+      return false;
+    }
+
+    const service = String(payload.service || '').trim();
+
+    return Boolean(
+      payload.ok === true ||
+      payload.backend === true ||
+      service === 'TH79_IMOVE_CORE' ||
+      service === 'TH79 iMove API'
+    );
+  } catch (error) {
+    console.error('[CORE HEALTH CHECK]', baseUrl, error.message);
     return false;
   }
 }
