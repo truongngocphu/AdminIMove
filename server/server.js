@@ -305,7 +305,11 @@ async function resolveCoreBackend(force = false) {
   if (force) coreCache.attempts = [];
 
   if (CORE_BACKEND_URL) {
-    const envCore = await testCandidates([CORE_BACKEND_URL], 'CORE_BACKEND_URL', 1300);
+    const envCore = await testCandidates(
+  [CORE_BACKEND_URL],
+  'CORE_BACKEND_URL',
+  5000
+);
     if (envCore) {
       coreCache = { ...coreCache, baseUrl: envCore, source: 'CORE_BACKEND_URL', discoveredAt: Date.now(), lastError: null };
       return envCore;
