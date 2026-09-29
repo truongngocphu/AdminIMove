@@ -929,7 +929,7 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-app.get('/api/bootstrap', async (_req, res) => {
+app.get('/api/bootstrap', requireAdminAccess(), async (req, res) => {
   try {
     const [customers, drivers, trips, payments, revenue, settings] = await Promise.all([
       getArrayData('customers'),
