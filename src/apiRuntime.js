@@ -1,13 +1,16 @@
 const normalizeBase = (value) => String(value || '').trim().replace(/\/+$/, '');
 
-// Production defaults: frontend on Vercel, Core + Admin Gateway on VPS.
+// Single production API origin: Core Backend on the VPS.
+// Admin Gateway has been merged into Core, so every Admin request goes directly here.
 export const CORE_BACKEND_URL = normalizeBase(
-  import.meta.env.VITE_CORE_BACKEND_URL || 'https://backendimove.daututh79.com'
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_CORE_BACKEND_URL ||
+  'https://backendimove.daututh79.com'
 );
 
-export const ADMIN_GATEWAY_URL = normalizeBase(
-  import.meta.env.VITE_ADMIN_GATEWAY_URL || `${CORE_BACKEND_URL}/admin-gateway`
-);
+export const ADMIN_API_URL = CORE_BACKEND_URL;
+// Backward-compatible alias for existing components. It intentionally points to Core.
+export const ADMIN_GATEWAY_URL = ADMIN_API_URL;
 
 export function coreUrl(path = '') {
   const suffix = String(path || '').startsWith('/') ? String(path || '') : `/${path}`;
@@ -16,5 +19,5 @@ export function coreUrl(path = '') {
 
 export function gatewayUrl(path = '') {
   const suffix = String(path || '').startsWith('/') ? String(path || '') : `/${path}`;
-  return `${ADMIN_GATEWAY_URL}${suffix}`;
+  return `${ADMIN_API_URL}${suffix}`;
 }

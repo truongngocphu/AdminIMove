@@ -38,6 +38,6 @@ export default function SettingsPage(){
       <article><Database/><span>MongoDB Atlas</span><b>{state?.gateway?.state===1?'Connected':'Qua Admin Gateway'}</b><small>{state?.gateway?.database||'th79_imove'}</small></article>
       <article><MapPinned/><span>TrackAsia</span><b>{usesTrackAsiaPublicTestKey()?'Test key':'Configured'}</b><small>{trackAsiaConfig.detailLevel||'enhanced'} · {trackAsiaConfig.styleUrl?'Custom style':'Streets v2'}</small></article>
     </div>
-    <section className="card enterprise-panel"><header><div><h2>Production contract</h2><p>Frontend Vercel không dùng /api tương đối để tránh bị SPA rewrite thành index.html.</p></div><ShieldCheck size={18}/></header><div className="settings-contract"><code>Core: backendimove.daututh79.com</code><code>Gateway: /admin-gateway</code><code>Admin Gateway 5060</code><code>VITE_TRACKASIA_API_KEY</code></div></section>
+    <section className="card enterprise-panel"><header><div><h2>Production contract</h2><p>Frontend Vercel không dùng /api tương đối để tránh bị SPA rewrite thành index.html.</p></div><ShieldCheck size={18}/></header><div className="settings-contract"><code>Core: backendimove.daututh79.com</code><code>Admin API: dùng chung Core Backend</code><code>Không cần Gateway 5060</code><code>VITE_TRACKASIA_API_KEY</code></div></section>
   </section>;
 }

@@ -20,6 +20,8 @@ test('Vercel frontend uses explicit VPS endpoints', () => {
   const env = read('.env.production.example');
   const runtime = read('src/apiRuntime.js');
   assert.match(env, /^VITE_CORE_BACKEND_URL=https:\/\/backendimove\.daututh79\.com$/m);
-  assert.match(env, /^VITE_ADMIN_GATEWAY_URL=https:\/\/backendimove\.daututh79\.com\/admin-gateway$/m);
+  assert.match(env, /^VITE_API_URL=https:\/\/backendimove\.daututh79\.com$/m);
+  assert.doesNotMatch(env, /admin-gateway/);
+  assert.match(runtime, /ADMIN_API_URL = CORE_BACKEND_URL/);
   assert.match(runtime, /backendimove\.daututh79\.com/);
 });
