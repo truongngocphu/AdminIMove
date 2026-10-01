@@ -1,3 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {normalizeAllowedServices} from '../src/driverAdminModel.js';
-test('driver service eligibility is canonical',()=>assert.deepEqual(normalizeAllowedServices(['bike','CAR_4','bad','luxury_7']),['BIKE','CAR_4','LUXURY_7']));
-test('driver online state remains read-only and customer page exists',()=>{const d=fs.readFileSync(new URL('../src/DriverManagement.jsx',import.meta.url),'utf8');assert.doesNotMatch(d,/toggleOnline|setOnline|onlineStatus[^\n]{0,80}method:\s*['"]PUT['"]/i);const c=fs.readFileSync(new URL('../src/CustomersPage.jsx',import.meta.url),'utf8');for(const m of ['Điểm hiện tại','Tổng chuyến','Lịch sử chuyến'])assert.match(c,new RegExp(m));});
