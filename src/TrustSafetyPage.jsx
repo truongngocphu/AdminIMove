@@ -1,10 +1,9 @@
 import React from 'react';
 import { ShieldCheck, TriangleAlert, ScanFace, Smartphone, MapPinned, Ban, RefreshCw, CheckCircle2, XCircle, Radar, Fingerprint } from 'lucide-react';
 import { adminAccessToken } from './adminApi.js';
-import { coreUrl } from './apiRuntime.js';
 import { PermissionDenied, PageError } from './AdminPageState.jsx';
 
-async function core(path,options={}){const r=await fetch(coreUrl(`/api/admin/v70/trust${path}`),{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${adminAccessToken()}`,...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||`API ${r.status}`);return d}
+async function core(path,options={}){const r=await fetch(`/core-api/api/admin/v70/trust${path}`,{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${adminAccessToken()}`,...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||`API ${r.status}`);return d}
 const fmt=v=>new Intl.NumberFormat('vi-VN').format(Number(v||0)); const date=v=>v?new Date(v).toLocaleString('vi-VN'):'—';
 export default function TrustSafetyPage(){
   const [overview,setOverview]=React.useState({}); const [events,setEvents]=React.useState([]); const [cases,setCases]=React.useState([]); const [verify,setVerify]=React.useState([]); const [profiles,setProfiles]=React.useState([]); const [devices,setDevices]=React.useState([]); const [rules,setRules]=React.useState([]); const [tab,setTab]=React.useState('events'); const [busy,setBusy]=React.useState(false); const [error,setError]=React.useState('');
@@ -12,7 +11,7 @@ export default function TrustSafetyPage(){
   React.useEffect(()=>{load()},[]);
   async function review(id,decision){await core(`/verifications/${id}/review`,{method:'POST',body:JSON.stringify({decision})});await load()}
   async function caseAction(id,action){await core(`/cases/${id}/action`,{method:'POST',body:JSON.stringify({action})});await load()}
-  async function openEvidence(id){const r=await fetch(coreUrl(`/api/admin/v70/trust/verifications/${id}/evidence`),{headers:{Authorization:`Bearer ${adminAccessToken()}`}});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'Không mở được evidence');}const url=URL.createObjectURL(await r.blob());window.open(url,'_blank','noopener,noreferrer');setTimeout(()=>URL.revokeObjectURL(url),60000)}
+  async function openEvidence(id){const r=await fetch(`/core-api/api/admin/v70/trust/verifications/${id}/evidence`,{headers:{Authorization:`Bearer ${adminAccessToken()}`}});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'Không mở được evidence');}const url=URL.createObjectURL(await r.blob());window.open(url,'_blank','noopener,noreferrer');setTimeout(()=>URL.revokeObjectURL(url),60000)}
   async function revokeDevice(id){await core(`/devices/${id}/revoke`,{method:'POST',body:'{}'});await load()}
   async function updateRule(rule,patch){await core(`/rules/${rule._id}`,{method:'PUT',body:JSON.stringify(patch)});await load()}
   if(error&&/403|quyền|permission/i.test(error)) return <PermissionDenied message={error}/>;

@@ -29,7 +29,7 @@ export function resolveRuntimeConfig(env = process.env) {
   const adminPort = resolveAdminPort({ adminPort: env.ADMIN_PORT, corePort }).port;
   const coreBackendUrl = normalizeHttpBaseUrl(
     env.CORE_BACKEND_URL,
-    'https://backendimove.daututh79.com',
+    `http://127.0.0.1:${corePort}`,
   );
   return { adminPort, corePort, coreBackendUrl };
 }

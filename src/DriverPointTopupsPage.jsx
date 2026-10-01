@@ -17,6 +17,7 @@ import {
   History,
 } from 'lucide-react';
 import { coreApiRequest } from './coreApi.js';
+import FundTransferSettingsPanel from './FundTransferSettingsPanel.jsx';
 
 const money=(v)=>new Intl.NumberFormat('vi-VN').format(Number(v||0))+' ₫';
 const num=(v)=>new Intl.NumberFormat('vi-VN').format(Number(v||0));
@@ -146,6 +147,8 @@ export default function DriverPointTopupsPage(){
     </header>
 
     {error&&<div className="v73-alert">{error}</div>}
+
+    <FundTransferSettingsPanel/>
 
     <div className="v14-kpis">
       <article><Clock3/><span>Đang chờ</span><b>{pending}</b><small>Cần đối chiếu ngân hàng</small></article>

@@ -3613,3 +3613,62 @@ img,svg{max-width:100%}
 .privacy-footer{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:28px 0 0;color:#7b8494;font-size:13px}.privacy-footer p{margin:0}.privacy-footer a{color:#b42318;text-decoration:none;font-weight:700}
 @media(max-width:900px){.privacy-layout{grid-template-columns:1fr}.privacy-toc{position:static;display:none}.privacy-content{padding:30px 24px}.privacy-data-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.privacy-shell{width:min(100% - 24px,1180px)}.privacy-hero-inner{height:64px}.privacy-brand small{display:none}.privacy-badge{font-size:12px;padding:7px 9px}.privacy-content{border-radius:18px;padding:26px 18px}.privacy-title-block h1{font-size:34px}.privacy-title-block>p{font-size:15px}.privacy-contact-card dl>div{grid-template-columns:1fr;gap:2px}.privacy-footer{align-items:flex-start;flex-direction:column}}
+
+
+/* ===== TH79 iMove 1.7.1 commercial hardening ===== */
+.coordinate-helper{grid-column:1/-1;display:grid;gap:9px;padding:12px;border:1px solid #f0d7dc;border-radius:14px;background:#fffafb}
+.coordinate-helper-row{display:flex;flex-wrap:wrap;gap:8px}
+.coordinate-paste{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.coordinate-paste input{min-width:0}
+.coordinate-helper small{color:#7d8794;line-height:1.45}
+
+.fund-transfer-console{display:grid;gap:14px;margin:14px 0 18px}
+.fund-transfer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.fund-transfer-head h2{margin:4px 0 0;font:600 18px 'Space Grotesk',sans-serif}
+.fund-transfer-head p{margin:5px 0 0;color:#7d8794;font-size:11px;line-height:1.5}
+.fund-transfer-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,.7fr);gap:14px}
+.fund-bank-card,.fund-qr-preview,.fund-review-card{padding:16px}
+.fund-bank-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;color:#23262b}
+.fund-bank-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fund-bank-form label{display:grid;gap:5px;font-size:10px;color:#66717e;font-weight:800}
+.fund-bank-form input{width:100%;min-width:0;border:1px solid #e0e4e8;border-radius:10px;padding:10px 11px;background:#fff;color:#1f242b}
+.fund-upload-button{position:relative;cursor:pointer}
+.fund-qr-preview{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:280px}
+.fund-qr-preview .fund-bank-title{align-self:stretch}
+.fund-qr-preview img{width:min(240px,100%);aspect-ratio:1/1;object-fit:contain;border-radius:16px;border:1px solid #ebeef1;background:#fff;padding:8px}
+.fund-qr-preview small{margin-top:10px;color:#7d8794;line-height:1.45;text-align:center}
+.fund-qr-empty{width:min(240px,100%);aspect-ratio:1/1;border:1px dashed #d7dce1;border-radius:16px;display:grid;place-items:center;align-content:center;gap:7px;color:#8b95a1;background:#fafafa}
+.fund-review-card>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.fund-review-card h3{margin:0;font-size:15px}
+.fund-review-card p{margin:4px 0 0;color:#7d8794;font-size:10px}
+.fund-review-card select{min-width:130px}
+
+/* Popup: never let form run off the viewport, including small laptop/tablet. */
+.broadcast-detail-backdrop,.modal-backdrop{overflow:auto;overscroll-behavior:contain;padding:max(12px,2vh) max(10px,2vw)}
+.broadcast-detail.driver-exp-modal{width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;margin:auto}
+.broadcast-detail.driver-exp-modal>header{position:sticky;top:0;z-index:3;background:#fff}
+.broadcast-detail.driver-exp-modal .broadcast-send-row{position:sticky;bottom:0;z-index:3;background:#fff;border-top:1px solid #f0e5e7;padding-top:12px}
+.sidebar-shell,.content-area,.page-content,.future-page-head,.v14-page-head{min-width:0}
+.v14-table-wrap,.future-table-wrap{overflow:auto;max-width:100%}
+.v14-table-wrap table,.future-table-wrap table{min-width:760px}
+
+/* Global admin responsiveness */
+@media(max-width:1100px){
+  .fund-transfer-grid{grid-template-columns:1fr}
+  .future-page-head,.v14-page-head{align-items:flex-start}
+  .future-actions,.page-actions{flex-wrap:wrap}
+}
+@media(max-width:760px){
+  .driver-exp-form,.fund-bank-form{grid-template-columns:1fr}
+  .coordinate-paste{grid-template-columns:1fr}
+  .fund-transfer-head,.fund-review-card>header{flex-direction:column}
+  .fund-review-card select{width:100%}
+  .broadcast-detail.driver-exp-modal{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:16px}
+  .future-page-head h1,.v14-page-head h1{font-size:24px;line-height:1.15}
+  .driver-exp-kpis,.v14-kpis{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:480px){
+  .driver-exp-kpis,.v14-kpis{grid-template-columns:1fr!important}
+  .page-actions,.future-actions{display:grid;grid-template-columns:1fr;width:100%}
+  .page-actions>.button,.future-actions>button,.page-actions>select,.page-actions>.enterprise-search{width:100%;min-width:0!important}
+}

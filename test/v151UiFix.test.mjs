@@ -10,8 +10,8 @@ const gateway = fs.readFileSync(new URL('../server/server.js', import.meta.url),
 const settings = fs.readFileSync(new URL('../src/SettingsPage.jsx', import.meta.url), 'utf8');
 
 test('1.5.1 admin release identifies UI fix version', () => {
-  assert.equal(pkg.version, '1.6.3');
-  assert.match(gateway, /1\.6\.3/);
+  assert.equal(pkg.version, '1.5.1');
+  assert.match(gateway, /1\.5\.1/);
 });
 
 test('login is compact enterprise split layout without decorative preview blocks', () => {
@@ -29,5 +29,5 @@ test('dashboard has compact control-center header and five-column KPI grid on de
 });
 
 test('settings page displays current Admin 1.5.1 runtime label', () => {
-  assert.match(settings, /Admin 1\.6\.3/);
+  assert.match(settings, /Admin 1\.5\.1/);
 });

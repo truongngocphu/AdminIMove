@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { coreApiRequest } from './coreApi.js';
 import { hasPermission } from './adminApi.js';
+import DispatchRoundSimulator from './DispatchRoundSimulator.jsx';
 
 const money = value => new Intl.NumberFormat('vi-VN').format(Number(value || 0)) + ' ₫';
 const timeText = value => {
@@ -138,6 +139,8 @@ export default function MatchingControlPage({access}){
       <Metric icon={Gauge} label="Bán kính" value={`${Number(policy?.maxRadiusKm||0)} km`} sub={`GPS tối đa ${policy?.locationFreshSeconds||0}s`}/>
       <Metric icon={WalletCards} label="Điểm tài xế" value={`${stats?.negativePointDrivers??0} bị chặn`} sub={`${stats?.lowPointDrivers??0} tài xế sắp hết điểm`}/>
     </div>
+
+    <DispatchRoundSimulator policy={policy} onPolicyChange={setPolicy} canManage={canManage}/>
 
     <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.05fr) minmax(360px,.95fr)',gap:14,alignItems:'start'}}>
       <div style={{display:'grid',gap:14}}>
