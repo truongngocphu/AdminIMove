@@ -27,6 +27,7 @@ import EnterpriseSettingsPage from './SettingsPage.jsx';
 import { PermissionDenied } from './AdminPageState.jsx';
 import { adminApiRequest, adminAccessToken, hasPermission } from './adminApi.js';
 import { coreAdminLogin, coreAdminLogout, hasCoreAdminSession, currentCoreAdmin } from './coreApi.js';
+import { coreUrl } from './apiRuntime.js';
 import {
   Bell, Search, Menu, X, LayoutDashboard, Users, Car, Route,
   WalletCards, ChartNoAxesCombined, Settings, LogOut, ArrowUpRight,
@@ -42,7 +43,9 @@ const dbCache={customers:[],drivers:[],trips:[],payments:[],revenue:[],settings:
 
 async function apiRequest(path,options={}){
   const token=adminAccessToken();
-  const response=await fetch(`/api${path}`,{
+  const url=coreUrl(`/api${path}`);
+  console.info('[TH79 iMove Admin] LEGACY ADMIN API REQUEST',{url,method:options.method||'GET'});
+  const response=await fetch(url,{
     headers:{
       'Content-Type':'application/json',
       ...(token?{Authorization:`Bearer ${token}`}:{ }),
@@ -51,7 +54,8 @@ async function apiRequest(path,options={}){
     ...options
   });
   const payload=await response.json().catch(()=>({}));
-  if(!response.ok) throw new Error(payload?.message||`API lỗi ${response.status}`);
+  console.info('[TH79 iMove Admin] LEGACY ADMIN API RESPONSE',{url,status:response.status,ok:response.ok,payload});
+  if(!response.ok){console.error('[TH79 iMove Admin] LEGACY ADMIN API FAILED',{url,status:response.status,payload});throw new Error(payload?.message||payload?.error||`API lỗi ${response.status}`);}
   return payload;
 }
 

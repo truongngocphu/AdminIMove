@@ -1,3 +1,4 @@
+import { coreUrl } from './apiRuntime.js';
 const ACCESS_KEY = 'imove_core_admin_access_token';
 
 export function adminAccessToken(){
@@ -17,18 +18,22 @@ export async function adminApiRequest(path, options = {}){
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`/api${path}`, {
+  const url = coreUrl(`/api${path}`);
+  console.info('[TH79 iMove Admin] ADMIN API REQUEST', { method: options.method || 'GET', url });
+  const response = await fetch(url, {
     ...options,
     headers,
     cache: 'no-store',
   });
 
   const payload = await response.json().catch(() => ({}));
+  console.info('[TH79 iMove Admin] ADMIN API RESPONSE', { url, status: response.status, ok: response.ok, payload });
   if(response.status === 401){
     window.dispatchEvent(new Event('imove:admin-auth-expired'));
   }
   if(!response.ok){
-    throw new Error(payload?.message || `API lỗi ${response.status}`);
+    console.error('[TH79 iMove Admin] ADMIN API FAILED', { url, status: response.status, payload });
+    throw new Error(payload?.message || payload?.error || `API lỗi ${response.status}`);
   }
   return payload;
 }
