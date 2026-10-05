@@ -28,6 +28,7 @@ import SupportCenterPage from './SupportCenterPage.jsx';
 import { PermissionDenied } from './AdminPageState.jsx';
 import { adminApiRequest, adminAccessToken, hasPermission } from './adminApi.js';
 import { coreAdminLogin, coreAdminLogout, hasCoreAdminSession, currentCoreAdmin } from './coreApi.js';
+import { coreUrl } from './apiRuntime.js';
 import {
   Bell, Search, Menu, X, LayoutDashboard, Users, Car, Route,
   WalletCards, ChartNoAxesCombined, Settings, LogOut, ArrowUpRight,
@@ -43,17 +44,32 @@ const dbCache={customers:[],drivers:[],trips:[],payments:[],revenue:[],settings:
 
 async function apiRequest(path,options={}){
   const token=adminAccessToken();
-  const response=await fetch(`/api${path}`,{
-    headers:{
-      'Content-Type':'application/json',
-      ...(token?{Authorization:`Bearer ${token}`}:{ }),
-      ...(options.headers||{})
-    },
-    ...options
-  });
-  const payload=await response.json().catch(()=>({}));
-  if(!response.ok) throw new Error(payload?.message||`API lỗi ${response.status}`);
-  return payload;
+  const controller=new AbortController();
+  const timeoutMs=Math.max(1500,Number(options.timeoutMs||10000));
+  const timer=window.setTimeout(()=>controller.abort(),timeoutMs);
+  const {timeoutMs:_ignoredTimeout,...fetchOptions}=options;
+  const url=coreUrl(`/api${path}`);
+  try{
+    const response=await fetch(url,{
+      headers:{
+        'Content-Type':'application/json',
+        ...(token?{Authorization:`Bearer ${token}`}:{ }),
+        ...(fetchOptions.headers||{})
+      },
+      ...fetchOptions,
+      signal:controller.signal,
+      cache:'no-store'
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(response.status===401) window.dispatchEvent(new Event('imove:admin-auth-expired'));
+    if(!response.ok) throw new Error(payload?.message||payload?.error||`API lỗi ${response.status}`);
+    return payload;
+  }catch(error){
+    if(error?.name==='AbortError') throw new Error(`Yêu cầu Core Backend quá thời gian (${Math.round(timeoutMs/1000)} giây).`);
+    throw error;
+  }finally{
+    window.clearTimeout(timer);
+  }
 }
 
 async function syncFromServer(){

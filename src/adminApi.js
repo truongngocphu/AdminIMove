@@ -1,3 +1,7 @@
+import { coreUrl } from './apiRuntime.js';
+
+const ACCESS_KEY = 'imove_core_admin_access_token';
+
 async function requestWithTimeout(url, options = {}, defaultTimeoutMs = 10000) {
   const timeoutMs = Math.max(1500, Number(options.timeoutMs || defaultTimeoutMs));
   const controller = new AbortController();
@@ -7,15 +11,13 @@ async function requestWithTimeout(url, options = {}, defaultTimeoutMs = 10000) {
     return await fetch(url, { ...fetchOptions, signal: controller.signal });
   } catch (error) {
     if (error?.name === 'AbortError') {
-      throw new Error(`Yêu cầu quá thời gian (${Math.round(timeoutMs / 1000)} giây). Vui lòng thử lại.`);
+      throw new Error(`Yêu cầu Core Backend quá thời gian (${Math.round(timeoutMs / 1000)} giây).`);
     }
     throw error;
   } finally {
     globalThis.clearTimeout(timer);
   }
 }
-
-const ACCESS_KEY = 'imove_core_admin_access_token';
 
 export function adminAccessToken(){
   return localStorage.getItem(ACCESS_KEY) || '';
@@ -29,23 +31,22 @@ export async function adminApiRequest(path, options = {}){
     ...(options.headers || {}),
     Authorization: `Bearer ${token}`,
   };
-
   if(options.body && !(options.body instanceof FormData)){
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await requestWithTimeout(`/api${path}`, {
+  const response = await requestWithTimeout(coreUrl(`/api${path}`), {
     ...options,
     headers,
     cache: 'no-store',
-  }, 10000);
+  }, Number(options.timeoutMs || 10000));
 
   const payload = await response.json().catch(() => ({}));
   if(response.status === 401){
     window.dispatchEvent(new Event('imove:admin-auth-expired'));
   }
   if(!response.ok){
-    throw new Error(payload?.message || `API lỗi ${response.status}`);
+    throw new Error(payload?.message || payload?.error || `API lỗi ${response.status}`);
   }
   return payload;
 }
