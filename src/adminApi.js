@@ -1,3 +1,5 @@
+import { coreUrl, fetchWithTimeout } from './apiRuntime.js';
+
 const ACCESS_KEY = 'imove_core_admin_access_token';
 
 export function adminAccessToken(){
@@ -17,11 +19,17 @@ export async function adminApiRequest(path, options = {}){
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`/api${path}`, {
-    ...options,
-    headers,
-    cache: 'no-store',
-  });
+  let response;
+  try {
+    response = await fetchWithTimeout(coreUrl(`/api${path}`), {
+      ...options,
+      headers,
+      cache: 'no-store',
+    }, Number(options.timeoutMs || 15000));
+  } catch (error) {
+    if(error?.name === 'AbortError') throw new Error('Backend phản hồi quá thời gian.');
+    throw new Error(`Không kết nối được Backend: ${error?.message || String(error)}`);
+  }
 
   const payload = await response.json().catch(() => ({}));
   if(response.status === 401){

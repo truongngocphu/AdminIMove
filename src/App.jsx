@@ -28,6 +28,7 @@ import EnterpriseSettingsPage from './SettingsPage.jsx';
 import { PermissionDenied } from './AdminPageState.jsx';
 import { adminApiRequest, adminAccessToken, hasPermission } from './adminApi.js';
 import { coreAdminLogin, coreAdminLogout, hasCoreAdminSession, currentCoreAdmin } from './coreApi.js';
+import { coreUrl, fetchWithTimeout } from './apiRuntime.js';
 import {
   Bell, Search, Menu, X, LayoutDashboard, Users, Car, Route,
   WalletCards, ChartNoAxesCombined, Settings, LogOut, ArrowUpRight,
@@ -43,15 +44,25 @@ const dbCache={customers:[],drivers:[],trips:[],payments:[],revenue:[],settings:
 
 async function apiRequest(path,options={}){
   const token=adminAccessToken();
-  const response=await fetch(`/api${path}`,{
-    headers:{
-      'Content-Type':'application/json',
-      ...(token?{Authorization:`Bearer ${token}`}:{ }),
-      ...(options.headers||{})
-    },
-    ...options
-  });
+  const headers={
+    'Content-Type':'application/json',
+    ...(token?{Authorization:`Bearer ${token}`}:{ }),
+    ...(options.headers||{})
+  };
+  if(options.body instanceof FormData) delete headers['Content-Type'];
+  let response;
+  try{
+    response=await fetchWithTimeout(coreUrl(`/api${path}`),{
+      ...options,
+      headers,
+      cache:'no-store'
+    },Number(options.timeoutMs||15000));
+  }catch(error){
+    if(error?.name==='AbortError') throw new Error('Backend phản hồi quá thời gian.');
+    throw new Error(`Không kết nối được Backend: ${error?.message||String(error)}`);
+  }
   const payload=await response.json().catch(()=>({}));
+  if(response.status===401) window.dispatchEvent(new Event('imove:admin-auth-expired'));
   if(!response.ok) throw new Error(payload?.message||`API lỗi ${response.status}`);
   return payload;
 }

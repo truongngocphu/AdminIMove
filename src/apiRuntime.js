@@ -1,23 +1,33 @@
-const normalizeBase = (value) => String(value || '').trim().replace(/\/+$/, '');
+const FALLBACK_CORE_BACKEND_URL = 'https://backendimove.daututh79.com';
 
-// Single production API origin: Core Backend on the VPS.
-// Admin Gateway has been merged into Core, so every Admin request goes directly here.
-export const CORE_BACKEND_URL = normalizeBase(
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_CORE_BACKEND_URL ||
-  'https://backendimove.daututh79.com'
-);
-
-export const ADMIN_API_URL = CORE_BACKEND_URL;
-// Backward-compatible alias for existing components. It intentionally points to Core.
-export const ADMIN_GATEWAY_URL = ADMIN_API_URL;
-
-export function coreUrl(path = '') {
-  const suffix = String(path || '').startsWith('/') ? String(path || '') : `/${path}`;
-  return `${CORE_BACKEND_URL}${suffix}`;
+function cleanBaseUrl(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\/+$/, '');
 }
 
-export function gatewayUrl(path = '') {
-  const suffix = String(path || '').startsWith('/') ? String(path || '') : `/${path}`;
-  return `${ADMIN_API_URL}${suffix}`;
+export const CORE_BACKEND_URL = cleanBaseUrl(
+  import.meta.env?.VITE_CORE_BACKEND_URL ||
+  import.meta.env?.VITE_API_URL ||
+  FALLBACK_CORE_BACKEND_URL
+);
+
+export function coreUrl(path = '') {
+  const value = String(path || '').trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  if (!value) return CORE_BACKEND_URL;
+  return `${CORE_BACKEND_URL}${value.startsWith('/') ? value : `/${value}`}`;
+}
+
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: options.signal || controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
