@@ -1,4 +1,20 @@
-import { coreUrl } from './apiRuntime.js';
+async function requestWithTimeout(url, options = {}, defaultTimeoutMs = 10000) {
+  const timeoutMs = Math.max(1500, Number(options.timeoutMs || defaultTimeoutMs));
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  const { timeoutMs: _ignoredTimeout, ...fetchOptions } = options;
+  try {
+    return await fetch(url, { ...fetchOptions, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Yêu cầu quá thời gian (${Math.round(timeoutMs / 1000)} giây). Vui lòng thử lại.`);
+    }
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
+}
+
 const ACCESS_KEY = 'imove_core_admin_access_token';
 
 export function adminAccessToken(){
@@ -18,22 +34,18 @@ export async function adminApiRequest(path, options = {}){
     headers['Content-Type'] = 'application/json';
   }
 
-  const url = coreUrl(`/api${path}`);
-  console.info('[TH79 iMove Admin] ADMIN API REQUEST', { method: options.method || 'GET', url });
-  const response = await fetch(url, {
+  const response = await requestWithTimeout(`/api${path}`, {
     ...options,
     headers,
     cache: 'no-store',
-  });
+  }, 10000);
 
   const payload = await response.json().catch(() => ({}));
-  console.info('[TH79 iMove Admin] ADMIN API RESPONSE', { url, status: response.status, ok: response.ok, payload });
   if(response.status === 401){
     window.dispatchEvent(new Event('imove:admin-auth-expired'));
   }
   if(!response.ok){
-    console.error('[TH79 iMove Admin] ADMIN API FAILED', { url, status: response.status, payload });
-    throw new Error(payload?.message || payload?.error || `API lỗi ${response.status}`);
+    throw new Error(payload?.message || `API lỗi ${response.status}`);
   }
   return payload;
 }

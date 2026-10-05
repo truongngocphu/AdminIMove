@@ -24,10 +24,10 @@ import SettlementPage from './SettlementPage.jsx';
 import MerchantsPage from './MerchantsPage.jsx';
 import CommerceOrdersPage from './CommerceOrdersPage.jsx';
 import EnterpriseSettingsPage from './SettingsPage.jsx';
+import SupportCenterPage from './SupportCenterPage.jsx';
 import { PermissionDenied } from './AdminPageState.jsx';
 import { adminApiRequest, adminAccessToken, hasPermission } from './adminApi.js';
 import { coreAdminLogin, coreAdminLogout, hasCoreAdminSession, currentCoreAdmin } from './coreApi.js';
-import { coreUrl } from './apiRuntime.js';
 import {
   Bell, Search, Menu, X, LayoutDashboard, Users, Car, Route,
   WalletCards, ChartNoAxesCombined, Settings, LogOut, ArrowUpRight,
@@ -35,7 +35,7 @@ import {
   ChevronRight, Download, Database, RefreshCw, SlidersHorizontal,
   CalendarDays, Star, MapPin, TrendingUp, UserRoundCheck, BadgeDollarSign,
   FileText, Eye, Pencil, Trash2, Plus, ChevronDown, UsersRound, History, Activity, RadioTower, Fingerprint, Megaphone,
-  PanelLeftClose, PanelLeftOpen, Store, ShoppingBag
+  PanelLeftClose, PanelLeftOpen, Store, ShoppingBag, MessageCircle
 } from 'lucide-react';
 
 const defaultSettings={companyName:'Công ty TNHH Đầu tư T&H 79',brandName:'TH79 iMove',hotline:'0335555066',autoAssign:true};
@@ -43,9 +43,7 @@ const dbCache={customers:[],drivers:[],trips:[],payments:[],revenue:[],settings:
 
 async function apiRequest(path,options={}){
   const token=adminAccessToken();
-  const url=coreUrl(`/api${path}`);
-  console.info('[TH79 iMove Admin] LEGACY ADMIN API REQUEST',{url,method:options.method||'GET'});
-  const response=await fetch(url,{
+  const response=await fetch(`/api${path}`,{
     headers:{
       'Content-Type':'application/json',
       ...(token?{Authorization:`Bearer ${token}`}:{ }),
@@ -54,8 +52,7 @@ async function apiRequest(path,options={}){
     ...options
   });
   const payload=await response.json().catch(()=>({}));
-  console.info('[TH79 iMove Admin] LEGACY ADMIN API RESPONSE',{url,status:response.status,ok:response.ok,payload});
-  if(!response.ok){console.error('[TH79 iMove Admin] LEGACY ADMIN API FAILED',{url,status:response.status,payload});throw new Error(payload?.message||payload?.error||`API lỗi ${response.status}`);}
+  if(!response.ok) throw new Error(payload?.message||`API lỗi ${response.status}`);
   return payload;
 }
 
@@ -428,6 +425,7 @@ const nav=[
   ['settlement','Settlement / Đối soát',CircleDollarSign,'settlements.view'],
   ['reports','Báo cáo',ChartNoAxesCombined,'reports.view'],
   ['broadcasts','Thông báo hệ thống',Megaphone,'broadcast.view'],
+  ['support','Chat Support',MessageCircle,'support.view'],
   ['trust','Trust & Safety',Fingerprint,'trust.view'],
   ['production-health','Security Test Mode',Activity,'settings.view'],
   ['admin-accounts','Tài khoản nội bộ',UsersRound,'admins.view'],
@@ -443,7 +441,7 @@ const navGroups=[
   {label:'NGƯỜI DÙNG & ĐỐI TÁC',items:['customers','drivers','kyc','merchants']},
   {label:'COMMERCE',items:['commerce-orders']},
   {label:'KINH DOANH',items:['pricing','promotions','payments','driver-point-topups','settlement','reports']},
-  {label:'TRUYỀN THÔNG',items:['broadcasts']},
+  {label:'TRUYỀN THÔNG',items:['broadcasts','support']},
   {label:'AN TOÀN & HỆ THỐNG',items:['trust','production-health','admin-accounts','admin-roles','admin-audit','admin-profile','settings']}
 ];
 
@@ -1207,15 +1205,29 @@ function AdminApp(){
   const [adminAccess,setAdminAccess]=React.useState(null);
 
   const loadAdminAccess=React.useCallback(async()=>{
-    if(!hasCoreAdminSession()) return;
-    try{setAdminAccess(await adminApiRequest('/admin-access/me'))}
-    catch(error){console.warn('Không tải được phân quyền quản trị:',error.message);setAdminAccess(null)}
+    if(!hasCoreAdminSession()) return null;
+    try{
+      const value=await adminApiRequest('/admin-access/me',{timeoutMs:8000});
+      setAdminAccess(value);
+      return value;
+    } catch(error){
+      console.warn('Không tải được phân quyền quản trị:',error.message);
+      setAdminAccess(null);
+      throw error;
+    }
   },[]);
 
   const loadDatabase=React.useCallback(async()=>{
     setDbState({loading:true,error:''});
-    try{await Promise.all([syncFromServer(),loadAdminAccess()]);setDbState({loading:false,error:''})}
-    catch(error){setDbState({loading:false,error:error.message||'Không thể kết nối MongoDB'})}
+    try{
+      // Chỉ chờ RBAC để mở giao diện. Bootstrap MongoDB lớn chạy nền,
+      // tránh giữ người dùng ở màn hình "Đang kết nối" quá lâu.
+      await loadAdminAccess();
+      setDbState({loading:false,error:''});
+      syncFromServer().catch(error=>console.warn('Bootstrap MongoDB chạy nền thất bại:',error.message));
+    } catch(error){
+      setDbState({loading:false,error:error.message||'Không thể tải quyền quản trị'});
+    }
   },[loadAdminAccess]);
 
   React.useEffect(()=>{if(logged)loadDatabase()},[logged,loadDatabase]);
@@ -1231,7 +1243,7 @@ function AdminApp(){
       try{await syncDriversFromServer()}catch(error){console.warn('Không thể làm mới trạng thái tài xế:',error.message)}
       finally{busy=false}
     };
-    const timer=window.setInterval(refresh,10000);
+    const timer=window.setInterval(refresh,20000);
     const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};
     document.addEventListener('visibilitychange',onVisibility);
     return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)};
@@ -1248,12 +1260,13 @@ function AdminApp(){
   if(dbState.error) return <main className="connection-screen error"><Database size={42}/><h1>Chưa kết nối được MongoDB</h1><p>{dbState.error}</p><button type="button" className="button button-primary" onClick={loadDatabase}><RefreshCw size={16}/> Thử kết nối lại</button><small>Kiểm tra server/.env, MongoDB Atlas Network Access và Terminal chạy API.</small></main>;
 
   const can=(permission)=>!adminAccess||hasPermission(adminAccess,permission);
-  let view=<DashboardPage/>;
+  let view=<DashboardPage access={adminAccess}/>;
   if(page==='production-health')view=can('settings.view')?<ProductionHealthPage/>:<PermissionDenied/>;
   if(page==='operations')view=can('bookings.view')?<CoreOperationsPage/>:<PermissionDenied/>;
   if(page==='matching')view=can('matching.view')?<MatchingControlPage access={adminAccess}/>:<PermissionDenied/>;
   if(page==='dispatch69')view=can('matching.view')?<DispatchCenterPage/>:<PermissionDenied/>;
   if(page==='broadcasts')view=can('broadcast.view')?<BroadcastCenterPage/>:<PermissionDenied/>;
+  if(page==='support')view=can('support.view')?<SupportCenterPage access={adminAccess}/>:<PermissionDenied/>;
   if(page==='trust')view=can('trust.view')?<TrustSafetyPage/>:<PermissionDenied/>;
   if(page==='customers')view=can('users.view')?<CustomersPage/>:<PermissionDenied/>;
   if(page==='drivers')view=can('drivers.view')?<Drivers/>:<PermissionDenied/>;
