@@ -15,19 +15,19 @@ import { hasPermission } from './adminApi.js';
 function dateTime(value) {
   if (!value) return '—';
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('vi-VN');
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('vi-VN');
 }
 
 function roleText(roles = []) {
-  const map = {
+  const labels = {
     CUSTOMER: 'Khách hàng',
     DRIVER: 'Tài xế',
     MERCHANT: 'Merchant',
     ADMIN: 'Admin',
   };
-  const list = (Array.isArray(roles) ? roles : []).map((x) => map[String(x).toUpperCase()] || x);
-  return list.join(', ') || 'Người dùng';
+  return (Array.isArray(roles) ? roles : [])
+    .map((x) => labels[String(x).toUpperCase()] || x)
+    .join(', ') || 'Người dùng';
 }
 
 export default function SupportCenterPage({ access }) {
@@ -51,9 +51,9 @@ export default function SupportCenterPage({ access }) {
   const loadList = React.useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoadingList(true);
     try {
-      const p = new URLSearchParams({ limit: '100', status });
-      if (query.trim()) p.set('q', query.trim());
-      const data = await coreApiRequest(`/api/admin-support/conversations?${p.toString()}`, { timeoutMs: 8000 });
+      const params = new URLSearchParams({ limit: '100', status });
+      if (query.trim()) params.set('q', query.trim());
+      const data = await coreApiRequest(`/api/admin-support/conversations?${params.toString()}`);
       const next = Array.isArray(data) ? data : [];
       setRows(next);
       setError('');
@@ -76,7 +76,7 @@ export default function SupportCenterPage({ access }) {
     }
     if (!silent) setLoadingChat(true);
     try {
-      const data = await coreApiRequest(`/api/admin-support/conversations/${encodeURIComponent(id)}/messages`, { timeoutMs: 8000 });
+      const data = await coreApiRequest(`/api/admin-support/conversations/${encodeURIComponent(id)}/messages`);
       setConversation(data?.conversation || null);
       setMessages(Array.isArray(data?.messages) ? data.messages : []);
       setRows((prev) => prev.map((x) => x.id === id ? { ...x, unread: 0, ...(data?.conversation || {}) } : x));
@@ -88,7 +88,7 @@ export default function SupportCenterPage({ access }) {
     }
   }, []);
 
-  React.useEffect(() => { loadList(); }, [status]);
+  React.useEffect(() => { loadList(); }, [status, loadList]);
   React.useEffect(() => { if (selectedId) loadChat(selectedId); }, [selectedId, loadChat]);
   React.useEffect(() => {
     const timer = window.setInterval(() => {
@@ -109,7 +109,6 @@ export default function SupportCenterPage({ access }) {
       await coreApiRequest(`/api/admin-support/conversations/${encodeURIComponent(selectedId)}/messages`, {
         method: 'POST',
         body: JSON.stringify({ text }),
-        timeoutMs: 8000,
       });
       setInput('');
       await Promise.all([loadChat(selectedId, { silent: true }), loadList({ silent: true })]);
@@ -126,7 +125,6 @@ export default function SupportCenterPage({ access }) {
       const updated = await coreApiRequest(`/api/admin-support/conversations/${encodeURIComponent(selectedId)}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
-        timeoutMs: 8000,
       });
       setConversation(updated);
       await loadList({ silent: true });

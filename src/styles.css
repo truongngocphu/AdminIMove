@@ -3674,7 +3674,8 @@ img,svg{max-width:100%}
 }
 
 /* ============================================================
-   TH79 iMove 1.7.3 - icon alignment, fast states, Support Center
+   TH79 iMove Admin3 patch - icon alignment + fast states + Support
+   Giữ nguyên Core Backend/Gateway của source gốc Admin(3).
    ============================================================ */
 .button,
 .icon-button,
