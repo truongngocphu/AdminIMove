@@ -171,6 +171,9 @@ export async function coreApiRequest(path, options = {}) {
 
   const method = String(options.method || 'GET').toUpperCase();
   const defaultTimeout = method === 'GET' ? 60000 : 35000;
+  const routeTimeout = String(path).startsWith('/api/v14/admin/analytics')
+    ? 120000
+    : defaultTimeout;
 
   let response;
   try {
@@ -181,7 +184,7 @@ export async function coreApiRequest(path, options = {}) {
         headers,
         cache: 'no-store',
       },
-      Number(options.timeoutMs || defaultTimeout)
+      Number(options.timeoutMs || routeTimeout)
     );
   } catch (error) {
     if (error?.name === 'AbortError') {

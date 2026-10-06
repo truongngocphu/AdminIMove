@@ -55,28 +55,47 @@ export default function DashboardPage({ access }) {
 
   const load = React.useCallback(async ({ silent = false } = {}) => {
     if (!silent) setRefreshing(true);
-    setError('');
+    if (!silent) setError('');
 
     const tasks = [];
     const needAnalytics = canReports || canPayments || canSettlement;
-    if (needAnalytics) {
-      tasks.push(coreApiRequest('/api/v14/admin/analytics?days=14', { timeoutMs: 7000 })
-        .then((value) => ({ key: 'analytics', value })));
-    } else if (canBookings) {
-      tasks.push(coreApiRequest('/api/v7/admin/bookings?limit=100', { timeoutMs: 7000 })
-        .then((value) => ({ key: 'bookings', value })));
+
+    // Analytics is relatively expensive. Load it on first/manual refresh only;
+    // the 30-second silent poll is reserved for live/support data.
+    if (needAnalytics && !silent) {
+      tasks.push(
+        coreApiRequest('/api/v14/admin/analytics?days=14', { timeoutMs: 120000 })
+          .then((value) => ({ key: 'analytics', value }))
+      );
+    } else if (canBookings && (!needAnalytics || !data)) {
+      tasks.push(
+        coreApiRequest('/api/v7/admin/bookings?limit=80')
+          .then((value) => ({ key: 'bookings', value }))
+      );
     }
+
     if (canDrivers) {
-      tasks.push(coreApiRequest('/api/v7/admin/drivers/live?limit=300', { timeoutMs: 6000 })
-        .then((value) => ({ key: 'live', value })));
+      tasks.push(
+        coreApiRequest('/api/v7/admin/drivers/live?limit=300')
+          .then((value) => ({ key: 'live', value }))
+      );
     }
+
     if (canSupport) {
-      tasks.push(coreApiRequest('/api/admin-support/summary', { timeoutMs: 6000 })
-        .then((value) => ({ key: 'support', value })));
+      tasks.push(
+        coreApiRequest('/api/admin-support/summary')
+          .then((value) => ({ key: 'support', value }))
+      );
+    }
+
+    if (!tasks.length) {
+      if (!silent) setRefreshing(false);
+      return;
     }
 
     const results = await Promise.allSettled(tasks);
     const failures = [];
+
     for (const item of results) {
       if (item.status === 'rejected') {
         failures.push(item.reason?.message || String(item.reason));
@@ -87,9 +106,10 @@ export default function DashboardPage({ access }) {
       if (item.value.key === 'live') setLive(Array.isArray(item.value.value) ? item.value.value : []);
       if (item.value.key === 'support') setSupport(item.value.value || {});
     }
-    if (failures.length) setError(failures[0]);
+
+    if (failures.length && !silent) setError(failures[0]);
     if (!silent) setRefreshing(false);
-  }, [canBookings, canDrivers, canPayments, canReports, canSettlement, canSupport]);
+  }, [canBookings, canDrivers, canPayments, canReports, canSettlement, canSupport, data]);
 
   React.useEffect(() => {
     load();
@@ -111,13 +131,14 @@ export default function DashboardPage({ access }) {
   const recent = [...trips].reverse().slice(0, 7);
 
   const cards = [];
-  if (canBookings) cards.push(<Kpi key="trips" icon={Route} label="Chuyến hôm nay" value={data ? today.length : '—'} sub={`${completedToday.length} hoàn thành`}/>);
-  if (canDrivers) cards.push(<Kpi key="drivers" icon={Activity} label="Tài xế Online" value={data ? online : '—'} sub={`${live.length} bản ghi live`}/>);
+  if (canBookings) cards.push(<Kpi key="trips" icon={Route} label="Tổng chuyến hôm nay" value={data ? today.length : '—'} sub={`${completedToday.length} hoàn thành`}/>);
+  if (canDrivers) cards.push(<Kpi key="drivers" icon={Activity} label="Tài xế Online" value={live.length || data ? online : '—'} sub={`${live.length} bản ghi live`}/>);
   if (canPayments || canSettlement || canReports) cards.push(<Kpi key="revenue" icon={WalletCards} label="Doanh thu hôm nay" value={data ? money(grossToday) : '—'} sub="Chuyến COMPLETED"/>);
-  if (canSettlement) cards.push(<Kpi key="settlement" icon={CircleDollarSign} label="Chờ đối soát" value={data ? Number(k.settlementBacklog || 0) : '—'} tone={Number(k.settlementBacklog || 0) > 0 ? 'warn' : ''}/>);
+  if (canSettlement) cards.push(<Kpi key="settlement" icon={CircleDollarSign} label="Settlement backlog" value={data ? Number(k.settlementBacklog || 0) : '—'} tone={Number(k.settlementBacklog || 0) > 0 ? 'warn' : ''}/>);
+  if (canDrivers) cards.push(<Kpi key="points" icon={Star} label="Điểm phát sinh hôm nay" value={data ? todayPoints : '—'} sub="Theo dữ liệu booking hiện có"/>);
   if (canSupport) cards.push(<Kpi key="support" icon={Headphones} label="Chat Support đang mở" value={support ? Number(support.open || 0) : '—'} sub={`${Number(support?.unread || 0)} tin chưa đọc`} tone={Number(support?.unread || 0) > 0 ? 'warn' : ''}/>);
-  if (canUsers && cards.length < 5) cards.push(<Kpi key="users" icon={Users} label="Kênh người dùng" value="Customer" sub="Theo quyền tài khoản"/>);
-  if (canPricing && cards.length < 5) cards.push(<Kpi key="pricing" icon={Star} label="Vai trò giá cước" value="Được cấp" sub="Dịch vụ & chính sách"/>);
+  if (canUsers && cards.length < 5) cards.push(<Kpi key="users" icon={Users} label="Khách hàng" value="Được cấp quyền" sub="Theo vai trò tài khoản"/>);
+  if (canPricing && cards.length < 5) cards.push(<Kpi key="pricing" icon={Star} label="Giá cước" value="Được cấp quyền" sub="Dịch vụ & chính sách"/>);
   if (!cards.length) cards.push(<Kpi key="default" icon={CheckCircle2} label="Hệ thống" value="Sẵn sàng" sub="Theo quyền tài khoản"/>);
 
   return <section className="enterprise-page dashboard-enterprise">
@@ -127,10 +148,12 @@ export default function DashboardPage({ access }) {
         <h1>Tổng quan · {roleLabel(access)}</h1>
         <p>Chỉ hiển thị chỉ số phù hợp với quyền của tài khoản đang đăng nhập.</p>
       </div>
-      <button type="button" className="button" onClick={() => load()} disabled={refreshing}><RefreshCw size={15}/>{refreshing ? 'Đang cập nhật...' : 'Làm mới'}</button>
+      <button type="button" className="button" onClick={() => load()} disabled={refreshing}>
+        <RefreshCw className={refreshing ? 'spin' : ''} size={15}/>{refreshing ? 'Đang cập nhật...' : 'Làm mới'}
+      </button>
     </header>
 
-    {refreshing && !data && <div className="dashboard-quick-loading"><RefreshCw className="spin" size={15}/> Đang lấy dữ liệu vận hành...</div>}
+    {refreshing && !data && <div className="dashboard-quick-loading"><RefreshCw className="spin" size={15}/> Đang lấy dữ liệu phù hợp với vai trò...</div>}
     {error && <div className="v73-alert"><AlertTriangle size={15}/> {error} <button type="button" className="text-button" onClick={() => load()}>Thử lại</button></div>}
 
     <div className="enterprise-kpi-grid dashboard-kpi-strip">{cards}</div>
@@ -150,7 +173,7 @@ export default function DashboardPage({ access }) {
       {canBookings && <section className="card enterprise-panel">
         <header><div><h2>Chuyến gần đây</h2><p>Trạng thái từ Backend</p></div><Route size={18}/></header>
         <div className="enterprise-table-wrap"><table><thead><tr><th>Mã</th><th>Dịch vụ</th><th>Trạng thái</th><th>Khách trả</th></tr></thead><tbody>{recent.map((x) => <tr key={x.id}><td><code>{String(x.id).slice(-8)}</code></td><td>{normalizeServiceCode(x)}</td><td><span className={`v14-status ${String(x.status).toUpperCase() === 'COMPLETED' ? 'success' : 'pending'}`}>{STATUS_LABEL[String(x.status).toUpperCase()] || x.status || '—'}</span></td><td><b>{money(x.customerTotal)}</b></td></tr>)}</tbody></table></div>
-        {!recent.length && <PageEmpty title="Chưa có chuyến"/>}
+        {!recent.length && !refreshing && <PageEmpty title="Chưa có chuyến"/>}
       </section>}
 
       {canSupport && <section className="card enterprise-panel">
