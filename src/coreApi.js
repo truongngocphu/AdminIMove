@@ -1,5 +1,21 @@
-import { CORE_BACKEND_URL, coreUrl, fetchWithTimeout } from './apiRuntime.js';
+async function requestWithTimeout(url, options = {}, defaultTimeoutMs = 10000) {
+  const timeoutMs = Math.max(1500, Number(options.timeoutMs || defaultTimeoutMs));
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  const { timeoutMs: _ignoredTimeout, ...fetchOptions } = options;
+  try {
+    return await fetch(url, { ...fetchOptions, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Yêu cầu quá thời gian (${Math.round(timeoutMs / 1000)} giây). Vui lòng thử lại.`);
+    }
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
+}
 
+const CORE_PROXY_BASE = '/core-api';
 const ACCESS_KEY = 'imove_core_admin_access_token';
 const USER_KEY = 'imove_core_admin_user';
 
@@ -22,67 +38,38 @@ export function clearCoreAdminSession() {
 }
 
 export async function getCoreConnection(refresh = false) {
-  try {
-    const response = await fetchWithTimeout(
-      coreUrl('/health'),
-      {
-        cache: 'no-store',
-        headers: refresh ? { 'Cache-Control': 'no-cache' } : undefined,
-      },
-      8000
-    );
-
-    const payload = await response.json().catch(() => ({}));
-    const connected = response.ok && (
-      payload?.ok === true ||
-      payload?.backend === true ||
-      payload?.service === 'TH79_IMOVE_CORE' ||
-      String(payload?.service || '').toLowerCase().includes('imove')
-    );
-
-    return {
-      connected,
-      configured: true,
-      baseUrl: CORE_BACKEND_URL,
-      source: 'DIRECT_PUBLIC_BACKEND',
-      status: response.status,
-      health: payload,
-      message: connected ? 'Core Backend đã kết nối.' : (payload?.message || `Core Backend phản hồi HTTP ${response.status}.`),
-    };
-  } catch (error) {
-    return {
-      connected: false,
-      configured: true,
-      baseUrl: CORE_BACKEND_URL,
-      source: 'DIRECT_PUBLIC_BACKEND',
-      message: error?.name === 'AbortError'
-        ? 'Core Backend phản hồi quá thời gian.'
-        : `Không kết nối được Core Backend: ${error?.message || String(error)}`,
-    };
-  }
-}
-
-export async function coreAdminLogin({ login, password }) {
-  const connection = await getCoreConnection(false);
-  if (!connection?.connected) {
-    throw new Error(connection?.message || 'Không tìm thấy Core Backend.');
-  }
-
-  const response = await fetchWithTimeout(
-    coreUrl('/api/admin-auth/login'),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password }),
-      cache: 'no-store',
-    },
-    12000
-  );
+  const response = await requestWithTimeout(`/api/core-connection${refresh ? '?refresh=1' : ''}`, { cache: 'no-store', timeoutMs: 6000 });
 
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload?.message || `Đăng nhập thất bại (${response.status})`);
+    throw new Error(payload?.message || `Admin Gateway lỗi ${response.status}`);
+  }
+
+  return payload;
+}
+
+export async function coreAdminLogin({ login, password }) {
+  // Trigger discovery before login so the UI gets a clear LAN error instead of ERR_CONNECTION_REFUSED.
+  const connection = await getCoreConnection(false);
+  if (!connection?.connected) {
+    const detail = connection?.hint ? ` ${connection.hint}` : '';
+    throw new Error((connection?.message || 'Không tìm thấy Core Backend.') + detail);
+  }
+
+  const response = await requestWithTimeout(`${CORE_PROXY_BASE}/api/admin-auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, password }),
+    timeoutMs: 10000,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.message || `Đăng nhập thất bại (${response.status})`
+    );
   }
 
   if (!payload?.accessToken) {
@@ -116,23 +103,11 @@ export async function coreApiRequest(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  let response;
-  try {
-    response = await fetchWithTimeout(
-      coreUrl(path),
-      {
-        ...options,
-        headers,
-        cache: 'no-store',
-      },
-      Number(options.timeoutMs || 15000)
-    );
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error('Core Backend phản hồi quá thời gian.');
-    }
-    throw new Error(`Không kết nối được Core Backend: ${error?.message || String(error)}`);
-  }
+  const response = await requestWithTimeout(`${CORE_PROXY_BASE}${path}`, {
+    ...options,
+    headers,
+    cache: 'no-store',
+  }, 10000);
 
   const payload = await response.json().catch(() => ({}));
 
@@ -164,13 +139,14 @@ export async function openCorePrivateFile(fileId) {
   const popup = window.open('', '_blank');
 
   try {
-    const response = await fetchWithTimeout(
-      coreUrl(`/api/kyc/files/${encodeURIComponent(fileId)}`),
+    const response = await requestWithTimeout(
+      `${CORE_PROXY_BASE}/api/kyc/files/${encodeURIComponent(fileId)}`,
       {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
+        timeoutMs: 20000,
       },
-      20000
+      20000,
     );
 
     if (response.status === 401) {
@@ -180,14 +156,19 @@ export async function openCorePrivateFile(fileId) {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      throw new Error(payload?.message || `Không thể mở file (${response.status})`);
+      throw new Error(
+        payload?.message || `Không thể mở file (${response.status})`
+      );
     }
 
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 
-    if (popup) popup.location.href = url;
-    else window.open(url, '_blank', 'noopener,noreferrer');
+    if (popup) {
+      popup.location.href = url;
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
 
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   } catch (error) {
@@ -196,4 +177,4 @@ export async function openCorePrivateFile(fileId) {
   }
 }
 
-export const CORE_API_URL = CORE_BACKEND_URL;
+export const CORE_API_URL = CORE_PROXY_BASE;

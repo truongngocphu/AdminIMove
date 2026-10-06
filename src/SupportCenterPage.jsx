@@ -201,7 +201,20 @@ export default function SupportCenterPage({ access }) {
           </div>
 
           <form className="support-compose" onSubmit={sendMessage}>
-            <textarea value={input} onChange={(e) => setInput(e.target.value)} disabled={!canReply || String(current.status || '').toUpperCase() === 'CLOSED'} rows={2} maxLength={2000} placeholder={canReply ? 'Nhập nội dung phản hồi...' : 'Tài khoản chưa có quyền phản hồi.'}/>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(e);
+                }
+              }}
+              disabled={!canReply || String(current.status || '').toUpperCase() === 'CLOSED'}
+              rows={2}
+              maxLength={2000}
+              placeholder={canReply ? 'Nhập nội dung phản hồi... (Enter để gửi, Shift+Enter xuống dòng)' : 'Tài khoản chưa có quyền phản hồi.'}
+            />
             <button type="submit" className="button button-primary support-send" disabled={!canReply || sending || !input.trim() || String(current.status || '').toUpperCase() === 'CLOSED'}><Send size={16}/>{sending ? 'Đang gửi...' : 'Gửi'}</button>
           </form>
         </>}
