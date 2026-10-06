@@ -34,27 +34,64 @@ function healthLooksLikeCore(payload) {
   );
 }
 
-export async function getCoreConnection(refresh = false) {
-  try {
-    const response = await fetchWithTimeout(
-      coreUrl('/health'),
-      {
-        cache: 'no-store',
-        headers: refresh ? { 'Cache-Control': 'no-cache' } : undefined,
-      },
-      8000
-    );
+async function probeLive(refresh = false) {
+  const response = await fetchWithTimeout(
+    coreUrl('/live'),
+    {
+      cache: 'no-store',
+      headers: refresh ? { 'Cache-Control': 'no-cache' } : undefined,
+    },
+    10000
+  );
 
-    const payload = await response.json().catch(() => ({}));
-    // IMPORTANT: ready=false does NOT mean Core is offline.
-    // Optional components such as FCM can make readiness false while API/Mongo/dispatch are healthy.
+  const payload = await response.json().catch(() => ({}));
+  return { response, payload };
+}
+
+async function probeHealth(refresh = false) {
+  const response = await fetchWithTimeout(
+    coreUrl('/health'),
+    {
+      cache: 'no-store',
+      headers: refresh ? { 'Cache-Control': 'no-cache' } : undefined,
+    },
+    30000
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  return { response, payload };
+}
+
+export async function getCoreConnection(refresh = false) {
+  // /live chỉ kiểm tra process HTTP nên nhanh hơn /health (Mongo/metrics/FCM...).
+  // Nếu /live OK thì Admin được phép hoạt động ngay; ready=false của /health
+  // không được coi là mất Core Backend.
+  try {
+    const { response, payload } = await probeLive(refresh);
+    if (response.ok) {
+      return {
+        connected: true,
+        configured: true,
+        baseUrl: CORE_BACKEND_URL,
+        source: 'DIRECT_PUBLIC_BACKEND_LIVE',
+        status: response.status,
+        health: payload,
+        message: 'Core Backend đã kết nối.',
+      };
+    }
+  } catch (_) {
+    // Fallback sang /health bên dưới.
+  }
+
+  try {
+    const { response, payload } = await probeHealth(refresh);
     const connected = response.ok && healthLooksLikeCore(payload);
 
     return {
       connected,
       configured: true,
       baseUrl: CORE_BACKEND_URL,
-      source: 'DIRECT_PUBLIC_BACKEND',
+      source: 'DIRECT_PUBLIC_BACKEND_HEALTH',
       status: response.status,
       health: payload,
       ready: payload?.ready === true,
@@ -69,15 +106,13 @@ export async function getCoreConnection(refresh = false) {
       baseUrl: CORE_BACKEND_URL,
       source: 'DIRECT_PUBLIC_BACKEND',
       message: error?.name === 'AbortError'
-        ? 'Core Backend phản hồi quá thời gian.'
+        ? 'Core Backend phản hồi quá thời gian (30 giây).'
         : `Không kết nối được Core Backend: ${error?.message || String(error)}`,
     };
   }
 }
 
 export async function coreAdminLogin({ login, password }) {
-  // Do not block login merely because the health probe reports ready=false.
-  // Try the real auth endpoint directly; it is the authoritative check.
   let response;
   try {
     response = await fetchWithTimeout(
@@ -88,11 +123,11 @@ export async function coreAdminLogin({ login, password }) {
         body: JSON.stringify({ login, password }),
         cache: 'no-store',
       },
-      12000
+      30000
     );
   } catch (error) {
     if (error?.name === 'AbortError') {
-      throw new Error('Core Backend phản hồi quá thời gian.');
+      throw new Error('Core Backend phản hồi quá thời gian (30 giây).');
     }
     throw new Error(`Không kết nối được Core Backend: ${error?.message || String(error)}`);
   }
@@ -134,6 +169,9 @@ export async function coreApiRequest(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
+  const method = String(options.method || 'GET').toUpperCase();
+  const defaultTimeout = method === 'GET' ? 60000 : 35000;
+
   let response;
   try {
     response = await fetchWithTimeout(
@@ -143,11 +181,11 @@ export async function coreApiRequest(path, options = {}) {
         headers,
         cache: 'no-store',
       },
-      Number(options.timeoutMs || 15000)
+      Number(options.timeoutMs || defaultTimeout)
     );
   } catch (error) {
     if (error?.name === 'AbortError') {
-      throw new Error('Core Backend phản hồi quá thời gian.');
+      throw new Error(`Core Backend phản hồi quá thời gian khi gọi ${path}.`);
     }
     throw new Error(`Không kết nối được Core Backend: ${error?.message || String(error)}`);
   }
@@ -181,7 +219,7 @@ export async function openCorePrivateFile(fileId) {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       },
-      20000
+      60000
     );
 
     if (response.status === 401) {

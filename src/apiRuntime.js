@@ -19,15 +19,27 @@ export function coreUrl(path = '') {
   return `${CORE_BACKEND_URL}${value.startsWith('/') ? value : `/${value}`}`;
 }
 
-export async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 45000) {
   const controller = new AbortController();
+  const externalSignal = options.signal;
+
+  const abortFromExternal = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', abortFromExternal, { once: true });
+  }
+
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     return await fetch(url, {
       ...options,
-      signal: options.signal || controller.signal,
+      signal: controller.signal,
     });
   } finally {
     window.clearTimeout(timer);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', abortFromExternal);
+    }
   }
 }
