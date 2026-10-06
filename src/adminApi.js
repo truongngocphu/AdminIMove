@@ -1,19 +1,4 @@
-async function requestWithTimeout(url, options = {}, defaultTimeoutMs = 10000) {
-  const timeoutMs = Math.max(1500, Number(options.timeoutMs || defaultTimeoutMs));
-  const controller = new AbortController();
-  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
-  const { timeoutMs: _ignoredTimeout, ...fetchOptions } = options;
-  try {
-    return await fetch(url, { ...fetchOptions, signal: controller.signal });
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error(`Yêu cầu quá thời gian (${Math.round(timeoutMs / 1000)} giây). Vui lòng thử lại.`);
-    }
-    throw error;
-  } finally {
-    globalThis.clearTimeout(timer);
-  }
-}
+import { coreUrl, fetchWithTimeout } from './apiRuntime.js';
 
 const ACCESS_KEY = 'imove_core_admin_access_token';
 
@@ -34,11 +19,17 @@ export async function adminApiRequest(path, options = {}){
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await requestWithTimeout(`/api${path}`, {
-    ...options,
-    headers,
-    cache: 'no-store',
-  }, 10000);
+  let response;
+  try {
+    response = await fetchWithTimeout(coreUrl(`/api${path}`), {
+      ...options,
+      headers,
+      cache: 'no-store',
+    }, Number(options.timeoutMs || 15000));
+  } catch (error) {
+    if(error?.name === 'AbortError') throw new Error('Backend phản hồi quá thời gian.');
+    throw new Error(`Không kết nối được Backend: ${error?.message || String(error)}`);
+  }
 
   const payload = await response.json().catch(() => ({}));
   if(response.status === 401){
